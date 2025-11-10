@@ -1,0 +1,56 @@
+package Explain_Churn / overwrite=yes;
+dcl package pymas pm;
+dcl package logger logr('App.MM.Python.DS2');
+dcl varchar(32767) character set utf8 pypgm;
+dcl int resultCode revision;
+
+method score(varchar(128000) "userPrompt",
+varchar(256) "API_KEY",
+in_out double resultCode,
+in_out varchar(32000) "response",
+in_out varchar(32000) "llmMetrics");
+
+   resultCode = revision = 0;
+   if null(pm) then do;
+      pm = _new_ pymas();
+      resultCode = pm.useModule('model_exec_de0b49a2-7566-4cb1-8c30-43d32fdaf936', 1);
+      if resultCode then do;
+         resultCode = pm.appendSrcLine('import sys');
+         resultCode = pm.appendSrcLine('sys.path.append("/models/resources/viya/7c25126a-c5ae-4ce0-8537-c4e695387a9c/")');
+         resultCode = pm.appendSrcLine('import settings_7c25126a_c5ae_4ce0_8537_c4e695387a9c');
+         resultCode = pm.appendSrcLine('settings_7c25126a_c5ae_4ce0_8537_c4e695387a9c.pickle_path = "/models/resources/viya/7c25126a-c5ae-4ce0-8537-c4e695387a9c/"');
+         resultCode = pm.appendSrcLine('import call_llm_0cb95e13_2018_40e9_b077_353280a9caa0');
+         resultCode = pm.appendSrcLine('def scoreModel(userPrompt, API_KEY):');
+         resultCode = pm.appendSrcLine('    "Output: response, llmMetrics"');
+         resultCode = pm.appendSrcLine('    return call_llm_0cb95e13_2018_40e9_b077_353280a9caa0.scoreModel(userPrompt, API_KEY)');
+
+         revision = pm.publish(pm.getSource(), 'model_exec_de0b49a2-7566-4cb1-8c30-43d32fdaf936');
+         if ( revision < 1 ) then do;
+            logr.log( 'e', 'py.publish() failed.');
+            resultCode = -1;
+            return;
+         end;
+      end;
+   end;
+
+   resultCode = pm.useMethod('scoreModel');
+   if resultCode then do;
+      logr.log('E', 'useMethod() failed. resultCode=$s', resultCode);
+      return;
+   end;
+   resultCode = pm.setString('userPrompt', "userPrompt");
+   if resultCode then
+      logr.log('E', 'setString for userPrompt failed.  resultCode=$s', resultCode);
+   resultCode = pm.setString('API_KEY', "API_KEY");
+   if resultCode then
+      logr.log('E', 'setString for API_KEY failed.  resultCode=$s', resultCode);
+   resultCode = pm.execute();
+   if (resultCode) then
+      logr.log('E', 'Error: pm.execute failed.  resultCode=$s', resultCode);
+   else do;
+      "response" = pm.getString('response');
+      "llmMetrics" = pm.getString('llmMetrics');
+   end;
+end;
+
+endpackage;
